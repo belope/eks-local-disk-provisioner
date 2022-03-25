@@ -2,7 +2,7 @@
 
 set -euxo pipefail
 
-BASE_DIR=${BASE_DIR:-"/mnt/disks"}
+BASE_DIR=${BASE_DIR:-"/mnt/data"}
 NVME_LIST=($(nvme list | grep "Amazon EC2 NVMe Instance Storage" | cut -d " " -f 1 || true))
 NVME_COUNT=${#NVME_LIST[@]}
 PARTED_SCRIPT=${PARTED_SCRIPT:-""}
@@ -35,9 +35,9 @@ case ${NVME_COUNT} in
     do
       mkfs.xfs -f $NVME
       UUID=$(blkid -s UUID -o value "$NVME") 
-      mkdir $BASE_DIR/$UUID
-      mount -t xfs "$NVME" "$BASE_DIR/$UUID"
-      echo UUID=`blkid -s UUID -o value "$NVME"` $BASE_DIR/$UUID xfs defaults 0 2 | tee -a /etc/fstab
+      #mkdir $BASE_DIR/$UUID
+      mount -t xfs "$NVME" "$BASE_DIR"
+      echo UUID=`blkid -s UUID -o value "$NVME"` $BASE_DIR xfs defaults 0 2 | tee -a /etc/fstab
     done
   else
     # PARTITIONING
@@ -53,9 +53,9 @@ case ${NVME_COUNT} in
       for i in $(seq 1 $PARTITION_COUNT); do
         mkfs.xfs -f "$NVME"p"$i"
         UUID=$(blkid -s UUID -o value "$NVME"p"$i")
-        mkdir $BASE_DIR/$UUID
-        mount -t xfs "$NVME"p"$i" $BASE_DIR/$UUID
-        echo UUID=`blkid -s UUID -o value "$NVME"p"$i"` $BASE_DIR/$UUID xfs defaults 0 2 | tee -a /etc/fstab
+        #mkdir $BASE_DIR/$UUID
+        mount -t xfs "$NVME"p"$i" $BASE_DIR
+        echo UUID=`blkid -s UUID -o value "$NVME"p"$i"` $BASE_DIR xfs defaults 0 2 | tee -a /etc/fstab
       done
     done
   fi
