@@ -2,7 +2,8 @@
 
 set -euxo pipefail
 
-BASE_DIR=${BASE_DIR:-"/mnt/data"}
+BASE_DIR=${BASE_DIR:-"/mnt/"}
+declare -a MOUNT_LIST=("/mnt/data" "/mnt/data2")
 NVME_LIST=($(nvme list | grep "Amazon EC2 NVMe Instance Storage" | cut -d " " -f 1 || true))
 NVME_COUNT=${#NVME_LIST[@]}
 PARTED_SCRIPT=${PARTED_SCRIPT:-""}
@@ -15,7 +16,9 @@ then
   sleep infinity
 fi
 
-mkdir -p $BASE_DIR
+for mntpointinlist in "${MOUNT_LIST[@]}"; do
+  mkdir -p $mntpointinlist
+done
 
 case ${NVME_COUNT} in
 "0")
@@ -36,8 +39,15 @@ case ${NVME_COUNT} in
       mkfs.xfs -f $NVME
       UUID=$(blkid -s UUID -o value "$NVME") 
       #mkdir $BASE_DIR/$UUID
-      mount -t xfs "$NVME" "$BASE_DIR"
-      echo UUID=`blkid -s UUID -o value "$NVME"` $BASE_DIR xfs defaults 0 2 | tee -a /etc/fstab
+      for mntpointinlist in "${MOUNT_LIST[@]}"; do
+        if mountpoint -q "$mntpointinlist"; then
+        printf "%s already mounted\n" $mntpointinlist
+    else
+        mount -t xfs "$NVME" "$mntpointinlist"
+        echo UUID=`blkid -s UUID -o value "$NVME"` $mntpointinlist xfs defaults 0 2 | tee -a /etc/fstab
+        break
+    fi
+      done
     done
   else
     # PARTITIONING
